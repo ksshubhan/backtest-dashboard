@@ -35,6 +35,42 @@ React (Vercel)  ──GET /run_strategy?name=…&ticker=…──▶  FastAPI (R
 5. The cumulative product of the strategy's returns gives the equity curve, from which the metrics are computed.
 6. The backend returns the curve as `[date, value]` pairs with the metrics, and the frontend draws it with Recharts.
 
+### The strategies
+
+Each strategy turns the price history into a daily position $s_t$: $+1$ for long, $-1$ for short, $0$ for flat. All three start from the daily return, where $P_t$ is the closing price on day $t$:
+
+```math
+r_t = \frac{P_t}{P_{t-1}} - 1
+```
+
+**Momentum** bets that today's move continues tomorrow. After an up day it goes long, otherwise short:
+
+```math
+s_t = \begin{cases} +1 & \text{if } r_t > 0 \\ -1 & \text{otherwise} \end{cases}
+```
+
+**Mean reversion** bets that today's move reverses tomorrow, so it takes the opposite position to momentum:
+
+```math
+s_t = \begin{cases} +1 & \text{if } r_t < 0 \\ -1 & \text{otherwise} \end{cases}
+```
+
+**SMA crossover** compares a fast and a slow simple moving average, the mean of the last $n$ closing prices. It goes long while the 20-day average is above the 50-day average, short while it is below, and stays flat until 50 days of prices exist:
+
+```math
+\mathrm{SMA}_n(t) = \frac{1}{n} \sum_{i=0}^{n-1} P_{t-i}
+\qquad
+s_t = \begin{cases} 0 & \text{if fewer than 50 prices} \\ +1 & \text{if } \mathrm{SMA}_{20}(t) > \mathrm{SMA}_{50}(t) \\ -1 & \text{otherwise} \end{cases}
+```
+
+For every strategy, yesterday's position earns today's return, and the equity curve compounds those returns from a starting value of 100:
+
+```math
+R_t = s_{t-1} \, r_t
+\qquad
+E_t = 100 \prod_{k=1}^{t} (1 + R_k)
+```
+
 The backend runs on Render's free tier, which sleeps when idle and can take up to a minute to wake. The frontend shows a notice if a request takes more than eight seconds and treats Render's 502–504 responses as "still starting", while showing real errors (such as an unknown ticker) as they are.
 
 ## Tech stack
@@ -82,6 +118,14 @@ npm install
 echo "VITE_API_URL=http://localhost:8000" > .env.local   # omit to use the deployed backend
 npm run dev                      # opens on http://localhost:5173
 ```
+
+## What I learned
+
+- **I built this to understand what backtesting involves.** I assumed backtesting was what quants and traders spend their days doing. A backtest runs a strategy's rules over historical market data to see how it would have performed in the past.
+- **Each strategy rests on a different belief about how prices move.** Momentum assumes a price that's moving will keep moving, mean reversion assumes stretched prices snap back to their average, and an SMA crossover treats a short average crossing a long one as a sign the trend is changing. That's why each suits different markets: trends for momentum and crossovers, choppy sideways markets for mean reversion.
+- **The Sharpe ratio separates skill from risk.** It shows whether high returns come from good decisions or just from taking on a lot of risk.
+- **Drawdown measures the worst losing stretch.** It's the biggest fall in portfolio value from a peak, which shows how painful a strategy would have been to hold.
+- **Free hosting has trade-offs.** The backend runs on a free tier that sleeps when idle, so the first request can take up to a minute. I added messages to tell users the server is waking up.
 
 ## Known limitations
 
