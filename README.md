@@ -4,7 +4,7 @@ A web dashboard for backtesting simple trading strategies on real stock data. Pi
 
 **Live:** [quantvision.vercel.app](https://quantvision.vercel.app)
 
-Built in October 2025 as an early project exploring how trading strategies are tested and evaluated. This repository is the React frontend; the Python API lives in [quantvision-backend](https://github.com/ksshubhan/quantvision-backend).
+Built in October 2025 as an early project exploring how trading strategies are tested and evaluated.
 
 ![QuantVision dashboard running an SMA crossover backtest on AAPL](docs/screenshot.png)
 
@@ -45,18 +45,39 @@ The backend runs on Render's free tier, which sleeps when idle and can take up t
 | Backend | Python, FastAPI, pandas, NumPy, yfinance, deployed on Render |
 | Data | Yahoo Finance daily prices |
 
+## API
+
+`GET /run_strategy?name=<strategy>&ticker=<symbol>`
+
+| Parameter | Values |
+| --- | --- |
+| `name` | `momentum`, `mean_reversion` or `sma_crossover` |
+| `ticker` | Any Yahoo Finance symbol, such as `AAPL` |
+
+It returns the equity curve as `[date, value]` pairs and the four metrics. An unknown strategy returns `400`, and a ticker with no data returns `404`, each with a `detail` message.
+
+## Repository layout
+
+```
+frontend/   React app (Vite): the dashboard, in src/App.jsx
+backend/    FastAPI app: the /run_strategy endpoint and backtest, in main.py
+docs/       Screenshot
+```
+
 ## Running it locally
 
-**Backend** (from a clone of [quantvision-backend](https://github.com/ksshubhan/quantvision-backend)):
+**Backend:**
 
 ```bash
+cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload        # serves on http://localhost:8000
 ```
 
-**Frontend** (this repository):
+**Frontend**, in a second terminal:
 
 ```bash
+cd frontend
 npm install
 echo "VITE_API_URL=http://localhost:8000" > .env.local   # omit to use the deployed backend
 npm run dev                      # opens on http://localhost:5173
