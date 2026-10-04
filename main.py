@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import datetime
 
@@ -26,6 +26,8 @@ def read_root():
     return {"message": "Backend is running successfully with CORS!"}
 
 # --- Simple backtest route ---
+STRATEGIES = {"momentum", "mean_reversion", "sma_crossover"}
+
 @app.get("/run_strategy")
 def run_strategy(name: str = "momentum", ticker: str = "AAPL"):
     import yfinance as yf
@@ -33,10 +35,13 @@ def run_strategy(name: str = "momentum", ticker: str = "AAPL"):
     import numpy as np
     import math
 
+    if name not in STRATEGIES:
+        raise HTTPException(status_code=400, detail=f"Unknown strategy '{name}'.")
+
     # 1. Download real stock data
     df = yf.download(ticker, period="6mo", interval="1d")
     if df.empty:
-        return {"error": "Invalid ticker or no data found."}
+        raise HTTPException(status_code=404, detail=f"No price data found for '{ticker}'.")
 
     # 2. Calculate returns
     df["returns"] = df["Close"].pct_change()
@@ -49,9 +54,11 @@ def run_strategy(name: str = "momentum", ticker: str = "AAPL"):
     elif name == "sma_crossover":
         df["SMA20"] = df["Close"].rolling(20).mean()
         df["SMA50"] = df["Close"].rolling(50).mean()
-        df["signal"] = np.where(df["SMA20"] > df["SMA50"], 1, -1)
-    else:
-        df["signal"] = 1
+        # Stay flat until both averages exist (the first 49 days), rather than
+        # treating the missing values as a sell signal.
+        df["signal"] = np.where(
+            df["SMA50"].isna(), 0, np.where(df["SMA20"] > df["SMA50"], 1, -1)
+        )
 
     # 4. Calculate equity curve
     df["strategy_return"] = df["signal"].shift(1) * df["returns"]
