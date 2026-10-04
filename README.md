@@ -1,12 +1,12 @@
-# QuantVision
+# Backtest Dashboard
 
 A web dashboard for backtesting simple trading strategies on real stock data. Pick a strategy and a stock, and it simulates the strategy over the last six months, charts how the portfolio would have grown and reports its risk and return metrics.
 
-**Live:** [quantvision.vercel.app](https://quantvision.vercel.app)
+**Live:** [backtest-dashboard.vercel.app](https://backtest-dashboard.vercel.app)
 
 Built in October 2025 as an early project exploring how trading strategies are tested and evaluated.
 
-![QuantVision dashboard running an SMA crossover backtest on AAPL](docs/screenshot.png)
+![Backtest Dashboard running an SMA crossover backtest on AAPL](docs/screenshot.png)
 
 ## What it does
 

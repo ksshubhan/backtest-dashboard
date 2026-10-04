@@ -129,7 +129,7 @@ function App() {
           letterSpacing: "-0.5px",
         }}
       >
-        QuantVision Dashboard
+        Backtest Dashboard
       </h1>
 
       {/* Run Button below title */}
