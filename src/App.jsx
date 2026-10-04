@@ -10,6 +10,9 @@ import {
   Legend,
 } from "recharts";
 
+// Set VITE_API_URL (e.g. in .env.local) to use a local backend.
+const API_URL = import.meta.env.VITE_API_URL ?? "https://quantvision-backend.onrender.com";
+
 const styles = {
   button: {
     background: "linear-gradient(90deg, #000000ff 0%, #000000ff 100%)",
@@ -56,19 +59,28 @@ function App() {
       }, 8000);
 
       const res = await fetch(
-        `https://quantvision-backend.onrender.com/run_strategy?name=${strategy}&ticker=${ticker}`
+        `${API_URL}/run_strategy?name=${strategy}&ticker=${ticker}`
       );
 
       clearTimeout(timeoutId);
 
-      const json = await res.json();
-      if (!json.equity_curve) {
-        setNotice("The backend is still initialising. This is expected on first load — please try again in a few seconds.");
+      if (!res.ok) {
+        // 502-504 come from Render while the server is still starting up;
+        // anything else is a real error from the backend, so show its message.
+        const isStarting = [502, 503, 504].includes(res.status);
+        const body = await res.json().catch(() => ({}));
+        setNotice(
+          isStarting
+            ? "The backend is still initialising. This is expected on first load — please try again in a few seconds."
+            : `Backtest failed: ${body.detail || `server error (${res.status})`}`
+        );
         setData([]);
         setMetrics(null);
-        setTimeout(() => setNotice(""), 4000); // fade out that message too
+        setTimeout(() => setNotice(""), 5000);
         return;
       }
+
+      const json = await res.json();
 
       const formatted = json.equity_curve.map(([date, value]) => ({
         date,
